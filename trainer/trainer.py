@@ -70,9 +70,6 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
             metric_loggers[i].update(loss=loss_value)
             metric_loggers[i].update(lr=optimizers[i].param_groups[0]["lr"])
 
-            if i != 0:
-                outputs[i] = models[i](samples)
-
     ave = []
     # gather the stats from all processes
     for metric_logger in metric_loggers:
