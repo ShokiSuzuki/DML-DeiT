@@ -74,11 +74,10 @@ class MLP(nn.Module):
 
 
 class DropPath(nn.Module):
-    def __init__(self, drop_path_rate=0.1, training=False):
+    def __init__(self, drop_path_rate=0.0):
         super().__init__()
 
         self.drop_path_rate = drop_path_rate
-        self.training = training
         self.keep_prob = 1 - self.drop_path_rate
 
     def forward(self, x):
@@ -101,7 +100,7 @@ class TransformerEncoder(nn.Module):
                             att_drop_rate=att_drop_rate, proj_drop_rate=drop_rate)
         self.drop_path = DropPath(drop_path_rate) if drop_path_rate > 0. else nn.Identity()
         self.norm2 = norm_layer(embed_dim)
-        self.mlp = MLP(in_features=embed_dim, hidden_features=embed_dim * mlp_ratio, act_layer=act_layer, drop_rate=drop_rate)
+        self.mlp = MLP(in_features=embed_dim, hidden_features=int(embed_dim * mlp_ratio), act_layer=act_layer, drop_rate=drop_rate)
 
     def forward(self, x):
         x = x + self.drop_path(self.att(self.norm1(x)))
