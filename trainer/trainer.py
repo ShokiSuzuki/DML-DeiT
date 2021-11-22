@@ -19,7 +19,7 @@ import utils
 
 def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizers,
                     device: torch.device, epoch: int, models_ema,
-                    max_norm: float = 0, mixup_fn: Optional[Mixup] = None,
+                    loss_scalers, max_norm: float = 0, mixup_fn: Optional[Mixup] = None,
                     set_training_mode=True):
 
     metric_loggers = []
@@ -54,10 +54,13 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                 sys.exit(1)
 
             optimizers[i].zero_grad()
-            loss.backward()
+            # loss.backward()
+            loss_scalers[i].scale(loss).backward()
             if max_norm is not None:
                 torch.nn.utils.clip_grad_norm_(models[i].parameters(), max_norm=max_norm)
-            optimizers[i].step()
+            #optimizers[i].step()
+            loss_scalers[i].step(optimizers[i])
+            loss_scalers[i].update()
 
             torch.cuda.synchronize()
             if models_ema[i] is not None:

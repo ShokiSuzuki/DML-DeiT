@@ -152,12 +152,14 @@ def main(args):
 
     optimizers    = []
     lr_schedulers = []
+    loss_scalers  = []
     for model_without_ddp in models_without_ddp:
         optimizer = create_optimizer(args, model_without_ddp)
         lr_scheduler, _ = create_scheduler(args, optimizer)
 
         optimizers.append(optimizer)
         lr_schedulers.append(lr_scheduler)
+        loss_scalers.append(torch.cuda.amp.GradScaler())
 
     criterion = LabelSmoothingCrossEntropy()
 
@@ -211,8 +213,8 @@ def main(args):
 
         train_stats_list = train_one_epoch(
             models, criterion, data_loader_train,
-            optimizers, device, epoch,
-            models_ema, args.clip_grad, mixup_fn,
+            optimizers, device, epoch, models_ema,
+            loss_scalers, args.clip_grad, mixup_fn,
             set_training_mode=args.finetune == ''  # keep in eval mode during finetuning
         )
 
