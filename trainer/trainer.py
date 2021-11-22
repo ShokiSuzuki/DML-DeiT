@@ -54,16 +54,12 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                 sys.exit(1)
 
             optimizers[i].zero_grad()
-
-            # this attribute is added by timm on one optimizer (adahessian)
-            is_second_order = hasattr(optimizers[i], 'is_second_order') and optimizers[i].is_second_order
-            # loss_scalers[i](loss, optimizers[i], clip_grad=max_norm,
-            #                 parameters=models[i].parameters(), create_graph=is_second_order)
-            loss.backward(create_graph=is_second_order)
+            loss.backward()
             if max_norm is not None:
                 torch.nn.utils.clip_grad_norm_(models[i].parameters(), max_norm=max_norm)
             optimizers[i].step()
 
+            torch.cuda.syncronize()
             if models_ema[i] is not None:
                 models_ema[i].update(models[i])
 
