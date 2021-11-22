@@ -59,7 +59,7 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                 torch.nn.utils.clip_grad_norm_(models[i].parameters(), max_norm=max_norm)
             optimizers[i].step()
 
-            torch.cuda.syncronize()
+            torch.cuda.synchronize()
             if models_ema[i] is not None:
                 models_ema[i].update(models[i])
 
