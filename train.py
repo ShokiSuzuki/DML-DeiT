@@ -224,7 +224,7 @@ def main(args):
                                                                                 optimizers,
                                                                                 lr_schedulers,
                                                                                 models_ema)):
-                one_epoch_path = Path(args.output_dir + '/' + f'epoch{epoch}')
+                one_epoch_path = Path(args.output_dir + '/' + 'epoch' + f'{epoch}'.zfill(4))
                 one_epoch_path.mkdir(parents=True, exist_ok=True)
                 checkpoint_path = one_epoch_path / f'checkpoint{i}.pth'
                 utils.save_on_master({
