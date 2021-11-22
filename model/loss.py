@@ -33,7 +33,7 @@ class DMLLoss(torch.nn.Module):
             outputs1, outputs1_kd = outputs[model_id]
 
         base_loss = self.base_criterion(outputs1, labels)
-        if self.distillation_type == 'none':
+        if self.distillation_type == 'none' or len(outputs) == 1:
             return base_loss
 
         distillation_loss = 0.0
