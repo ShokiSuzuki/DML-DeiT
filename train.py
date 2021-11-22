@@ -106,7 +106,7 @@ def main(args):
     models = []
     for model_name in args.models:
         print(f"Creating model: {model_name}")
-        model = deit_tiny_patch16_224(
+        model = deit_tiny_distilled_patch16_224(
             pretrained=False,
             num_classes=args.nb_classes,
             drop_rate=args.drop,
