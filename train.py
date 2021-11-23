@@ -234,7 +234,7 @@ def main(args):
                     'optimizer': optimizers[i].state_dict(),
                     'lr_scheduler': lr_schedulers[i].state_dict(),
                     'epoch': epoch,
-                    'model_ema': None if model_ema is not None else get_state_dict(models_ema[i]),
+                    'model_ema': None if not args.model_ema else get_state_dict(models_ema[i]),
                     'scaler': loss_scalers[i].state_dict(),
                     'args': args,
                 }, checkpoint_path)
