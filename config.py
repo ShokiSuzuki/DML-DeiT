@@ -127,8 +127,6 @@ def get_args_parser():
                         help='device to use for training / testing')
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--resume',  default='', help='resume from checkpoint')
-    parser.add_argument('--resume1', default='', help='resume1 from checkpoint')
-    parser.add_argument('--resume2', default='', help='resume2 from checkpoint')
     parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
                         help='start epoch')
     parser.add_argument('--eval', action='store_true', help='Perform evaluation only')
