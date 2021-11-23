@@ -191,6 +191,8 @@ def main(args):
                 args.start_epoch = checkpoint['epoch'] + 1
                 if args.model_ema:
                     utils._load_checkpoint_for_ema(models_ema[i], checkpoint['model_ema'])
+                if 'scaler' in checkpoint:
+                    loss_scalers[i].load_state_dict(checkpoint['scaler'])
 
     if args.eval:
         test_stats_list = evaluate(data_loader_val, models, device)
@@ -222,10 +224,11 @@ def main(args):
             lr_scheduler.step(epoch)
 
         if args.output_dir:
-            for i, (model_without_ddp, optimizer, lr_scheduler, model_ema) in enumerate(zip(models_without_ddp,
-                                                                                optimizers,
-                                                                                lr_schedulers,
-                                                                                models_ema)):
+            for i, (model_without_ddp, optimizer, lr_scheduler, model_ema, loss_scaler) in enumerate(zip(models_without_ddp,
+                                                                                                        optimizers,
+                                                                                                        lr_schedulers,
+                                                                                                        models_ema,
+                                                                                                        loss_scalers)):
                 one_epoch_path = Path(args.output_dir + '/' + 'epoch' + f'{epoch}'.zfill(4))
                 one_epoch_path.mkdir(parents=True, exist_ok=True)
                 checkpoint_path = one_epoch_path / f'checkpoint{i}.pth'
@@ -235,6 +238,7 @@ def main(args):
                     'lr_scheduler': lr_scheduler.state_dict(),
                     'epoch': epoch,
                     'model_ema': None if model_ema is not None else get_state_dict(model_ema),
+                    'scaler': loss_scaler.state_dict(),
                     'args': args,
                 }, checkpoint_path)
 
