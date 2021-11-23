@@ -103,6 +103,7 @@ def main(args):
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
 
+    num_models = len(args.models)
     models = []
     for model_name in args.models:
         print(f"Creating model: {model_name}")
@@ -119,12 +120,12 @@ def main(args):
         models.append(model)
 
 
-    models_ema = [None for _ in range(len(models))]
+    models_ema = [None for _ in range(num_models)]
     if args.model_ema:
         # Important to create EMA model after cuda(), DP wrapper, and AMP but before SyncBN and DDP wrapper
-        for i, model in enumerate(models):
+        for i in range(num_models):
             model_ema = ModelEma(
-                model,
+                models[i],
                 decay=args.model_ema_decay,
                 device='cpu' if args.model_ema_force_cpu else '',
                 resume='')
@@ -132,17 +133,17 @@ def main(args):
 
 
     ## settings for model
-    models_without_ddp = [model for model in models]
+    models_without_ddp = [models[i] for i in range(num_models)]
     if args.distributed:
-        for i, model in enumerate(models):
-            model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        for i in range(num_models):
+            model = torch.nn.parallel.DistributedDataParallel(models[i], device_ids=[args.gpu])
             models_without_ddp[i] = model.module
 
 
     # display number of params in models
     n_parameters = []
-    for model in models:
-        n_parameter = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    for i in range(num_models):
+        n_parameter = sum(p.numel() for p in models[i].parameters() if p.requires_grad)
         print('number of params:', n_parameter)
         n_parameters.append(n_parameter)
 
@@ -153,8 +154,8 @@ def main(args):
     optimizers    = []
     lr_schedulers = []
     loss_scalers  = []
-    for model_without_ddp in models_without_ddp:
-        optimizer = create_optimizer(args, model_without_ddp)
+    for i in range(num_models):
+        optimizer = create_optimizer(args, models_without_ddp[i])
         lr_scheduler, _ = create_scheduler(args, optimizer)
 
         optimizers.append(optimizer)
@@ -181,7 +182,7 @@ def main(args):
 
 
     if args.resume:
-        for i in range(len(models)):
+        for i in range(num_models):
             checkpoint_path = args.resume + '/' + f'checkpoint{i}.pth'
             checkpoint = torch.load(checkpoint_path , map_location='cpu')
             models_without_ddp[i].load_state_dict(checkpoint['model'])
@@ -208,7 +209,7 @@ def main(args):
 
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
-    max_accuracys = [0.0] * len(models)
+    max_accuracys = [0.0] * num_models
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
@@ -220,25 +221,21 @@ def main(args):
             set_training_mode=args.finetune == ''  # keep in eval mode during finetuning
         )
 
-        for lr_scheduler in lr_schedulers:
-            lr_scheduler.step(epoch)
+        for i in range(num_models):
+            lr_schedulers[i].step(epoch)
 
         if args.output_dir:
-            for i, (model_without_ddp, optimizer, lr_scheduler, model_ema, loss_scaler) in enumerate(zip(models_without_ddp,
-                                                                                                        optimizers,
-                                                                                                        lr_schedulers,
-                                                                                                        models_ema,
-                                                                                                        loss_scalers)):
+            for i in range(num_models):
                 one_epoch_path = Path(args.output_dir + '/' + 'epoch' + f'{epoch}'.zfill(4))
                 one_epoch_path.mkdir(parents=True, exist_ok=True)
                 checkpoint_path = one_epoch_path / f'checkpoint{i}.pth'
                 utils.save_on_master({
-                    'model': model_without_ddp.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'lr_scheduler': lr_scheduler.state_dict(),
+                    'model': models_without_ddp[i].state_dict(),
+                    'optimizer': optimizers[i].state_dict(),
+                    'lr_scheduler': lr_schedulers[i].state_dict(),
                     'epoch': epoch,
-                    'model_ema': None if model_ema is not None else get_state_dict(model_ema),
-                    'scaler': loss_scaler.state_dict(),
+                    'model_ema': None if model_ema is not None else get_state_dict(models_ema[i]),
+                    'scaler': loss_scalers[i].state_dict(),
                     'args': args,
                 }, checkpoint_path)
 

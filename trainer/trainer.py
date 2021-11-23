@@ -22,9 +22,10 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                     loss_scalers, clip_grad=None, mixup_fn: Optional[Mixup] = None,
                     set_training_mode=True):
 
+    num_models = len(models)
     metric_loggers = []
-    for model in models:
-        model.train(set_training_mode)
+    for i in range(num_models):
+        models[i].train(set_training_mode)
 
         metric_logger = utils.MetricLogger(delimiter="  ")
         metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -41,13 +42,10 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
             samples, targets = mixup_fn(samples, targets)
 
         with torch.cuda.amp.autocast():
-            outputs = [model(samples) for model in models]
+            outputs = [models[i](samples) for i in range(num_models)]
 
         ## model training
-        for i, (model, optimizer, loss_scaler, model_ema) in enumerate(zip(models,
-                                                                            optimizers,
-                                                                            loss_scalers,
-                                                                            models_ema)):
+        for i in range(num_models):
             with torch.cuda.amp.autocast():
                 loss = criterion(i, outputs, targets)
             loss_value = loss.item()
@@ -56,23 +54,23 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                 print("Loss is {}, stopping training".format(loss_value))
                 sys.exit(1)
 
-            optimizer.zero_grad()
+            optimizers[i].zero_grad()
             # loss_scaler.scale(loss).backward()
             # if clip_grad is not None:
             #     loss_scaler.unscale_(optimizer)
             #     torch.nn.utils.clip_grad_norm_(models[i].parameters(), clip_grad=clip_grad)
             # loss_scaler.step(optimizer)
             # loss_scaler.update()
-            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
-            loss_scaler(loss, optimizer, clip_grad=clip_grad,
-                        parameters=model.parameters(), create_graph=is_second_order)
+            is_second_order = hasattr(optimizers[i], 'is_second_order') and optimizers[i].is_second_order
+            loss_scalers[i](loss, optimizers[i], clip_grad=clip_grad,
+                        parameters=models[i].parameters(), create_graph=is_second_order)
 
             torch.cuda.synchronize()
-            if model_ema is not None:
-                model_ema.update(model)
+            if models_ema[i] is not None:
+                models_ema[i].update(models[i])
 
-            metric_logger.update(loss=loss_value)
-            metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+            metric_loggers[i].update(loss=loss_value)
+            metric_loggers[i].update(lr=optimizers[i].param_groups[0]["lr"])
 
     ave = []
     # gather the stats from all processes
@@ -89,9 +87,10 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
 def evaluate(data_loader, models, device):
     criterion = torch.nn.CrossEntropyLoss()
 
+    num_models = len(models)
     metric_loggers = []
-    for model in models:
-        model.eval()
+    for i in range(num_models):
+        models[i].eval()
         metric_logger = utils.MetricLogger(delimiter="  ")
         metric_loggers.append(metric_logger)
 
@@ -102,9 +101,9 @@ def evaluate(data_loader, models, device):
         target = target.to(device, non_blocking=True)
 
         batch_size = images.shape[0]
-        for i, model in enumerate(models):
+        for i in range(num_models):
             with torch.cuda.amp.autocast():
-                output = model(images)
+                output = models[i](images)
                 loss   = criterion(output, target)
 
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
@@ -114,7 +113,7 @@ def evaluate(data_loader, models, device):
 
     ave = []
     # gather the stats from all processes
-    for i in range(len(metric_loggers)):
+    for i in range(num_models):
         metric_loggers[i].synchronize_between_processes()
         print('* Acc@1 {top1.global_avg:.3f} Acc@5 {top5.global_avg:.3f} loss {losses.global_avg:.3f}'
             .format(top1=metric_loggers[i].acc1, top5=metric_loggers[i].acc5, losses=metric_loggers[i].loss))
