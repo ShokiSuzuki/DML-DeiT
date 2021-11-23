@@ -17,7 +17,7 @@ from timm.models import create_model
 from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
 from timm.scheduler import create_scheduler
 from timm.optim import create_optimizer
-from timm.utils import get_state_dict, ModelEma
+from timm.utils import get_state_dict, ModelEma, NativeScaler
 
 from dataloader.datasets import build_dataset
 from dataloader.samplers import RASampler
@@ -159,7 +159,7 @@ def main(args):
 
         optimizers.append(optimizer)
         lr_schedulers.append(lr_scheduler)
-        loss_scalers.append(torch.cuda.amp.GradScaler())
+        loss_scalers.append(NativeScaler())
 
     criterion = LabelSmoothingCrossEntropy()
 
