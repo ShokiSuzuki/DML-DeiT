@@ -5,7 +5,7 @@ Train and eval functions used in main.py
 """
 import math
 import sys
-from typing import Iterable, Optional
+from typing import Iterable, Optional, List
 
 import torch
 import torch.nn.functional as F
@@ -17,8 +17,8 @@ from model.loss import DMLLoss
 import utils
 
 
-def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizers,
-                    device: torch.device, epoch: int, models_ema,
+def train_one_epoch(models: List[torch.nn.Module], criterion: DMLLoss, data_loader: Iterable, optimizers: List[torch.optim.Optimizer],
+                    device: torch.device, epoch: int, models_ema: List[ModelEma],
                     loss_scalers, clip_grad=None, mixup_fn: Optional[Mixup] = None,
                     set_training_mode=True):
 
@@ -55,15 +55,15 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                 sys.exit(1)
 
             optimizers[i].zero_grad()
-            # loss_scaler.scale(loss).backward()
+            # loss_scalers[i].scale(loss).backward()
             # if clip_grad is not None:
             #     loss_scaler.unscale_(optimizer)
             #     torch.nn.utils.clip_grad_norm_(models[i].parameters(), clip_grad=clip_grad)
-            # loss_scaler.step(optimizer)
-            # loss_scaler.update()
+            # loss_scalers[i].step(optimizers[i])
+            # loss_scalers[i].update()
             is_second_order = hasattr(optimizers[i], 'is_second_order') and optimizers[i].is_second_order
             loss_scalers[i](loss, optimizers[i], clip_grad=clip_grad,
-                        parameters=models[i].parameters(), create_graph=is_second_order)
+                       parameters=models[i].parameters(), create_graph=is_second_order)
 
             torch.cuda.synchronize()
             if models_ema[i] is not None:
@@ -84,7 +84,7 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
 
 
 @torch.no_grad()
-def evaluate(data_loader, models, device):
+def evaluate(data_loader: Iterable, models: List[torch.nn.Module], device: torch.device):
     criterion = torch.nn.CrossEntropyLoss()
 
     num_models = len(models)
