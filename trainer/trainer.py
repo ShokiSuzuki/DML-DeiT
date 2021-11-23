@@ -57,12 +57,15 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                 sys.exit(1)
 
             optimizer.zero_grad()
-            loss_scaler.scale(loss).backward()
-            if clip_grad is not None:
-                loss_scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(models[i].parameters(), clip_grad=clip_grad)
-            loss_scaler.step(optimizer)
-            loss_scaler.update()
+            # loss_scaler.scale(loss).backward()
+            # if clip_grad is not None:
+            #     loss_scaler.unscale_(optimizer)
+            #     torch.nn.utils.clip_grad_norm_(models[i].parameters(), clip_grad=clip_grad)
+            # loss_scaler.step(optimizer)
+            # loss_scaler.update()
+            is_second_order = hasattr(optimizer, 'is_second_order') and optimizer.is_second_order
+            loss_scaler(loss, optimizer, clip_grad=clip_grad,
+                        parameters=model.parameters(), create_graph=is_second_order)
 
             torch.cuda.synchronize()
             if model_ema is not None:
