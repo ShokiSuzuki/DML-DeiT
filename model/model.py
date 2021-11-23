@@ -172,15 +172,15 @@ class VisionTransformer(nn.Module):
         if self.dist_token is not None:
             init.trunc_normal_(self.dist_token, std=.02)
         self.apply(self._init_weights)
-        
+
     def _init_weights(self, m):  # Add for deit
         if isinstance(m, nn.Linear):
             init.trunc_normal_(m.weight, std=.02)
-            if isinstance(m, nn.Linear) and m.bias is not None:
-                nn.init.constant_(m.bias, 0)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
         elif isinstance(m, nn.LayerNorm):
-            nn.init.constant_(m.bias, 0)
-            nn.init.constant_(m.weight, 1.0)
+            nn.init.zeros_(m.bias)
+            nn.init.ones_(m.weight)
 
     def forward_features(self, x):
         B = x.shape[0]
