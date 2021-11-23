@@ -19,7 +19,7 @@ import utils
 
 def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizers,
                     device: torch.device, epoch: int, models_ema,
-                    loss_scalers, max_norm: float = 0, mixup_fn: Optional[Mixup] = None,
+                    loss_scalers, clip_grad=None, mixup_fn: Optional[Mixup] = None,
                     set_training_mode=True):
 
     metric_loggers = []
@@ -43,8 +43,12 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
         with torch.cuda.amp.autocast():
             outputs = [model(samples) for model in models]
 
-        ## model training (model0 is independent)
-        for i in range(len(models)):
+        ## model training
+        for i, (model, optimizer, loss_scaler, model_ema, metric_logger) in enumerate(zip(models,
+                                                                                        optimizers,
+                                                                                        loss_scalers,
+                                                                                        models_ema,
+                                                                                        metric_loggers)):
             with torch.cuda.amp.autocast():
                 loss = criterion(i, outputs, targets)
             loss_value = loss.item()
@@ -53,21 +57,20 @@ def train_one_epoch(models, criterion: DMLLoss, data_loader: Iterable, optimizer
                 print("Loss is {}, stopping training".format(loss_value))
                 sys.exit(1)
 
-            optimizers[i].zero_grad()
-            # loss.backward()
-            loss_scalers[i].scale(loss).backward()
-            if max_norm is not None:
-                torch.nn.utils.clip_grad_norm_(models[i].parameters(), max_norm=max_norm)
-            #optimizers[i].step()
-            loss_scalers[i].step(optimizers[i])
-            loss_scalers[i].update()
+            optimizer.zero_grad()
+            loss_scaler.scale(loss).backward()
+            if clip_grad is not None:
+                loss_scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(models[i].parameters(), clip_grad=clip_grad)
+            loss_scaler.step(optimizer)
+            loss_scaler.update()
 
             torch.cuda.synchronize()
-            if models_ema[i] is not None:
-                models_ema[i].update(models[i])
+            if model_ema is not None:
+                model_ema.update(model)
 
-            metric_loggers[i].update(loss=loss_value)
-            metric_loggers[i].update(lr=optimizers[i].param_groups[0]["lr"])
+            metric_logger.update(loss=loss_value)
+            metric_logger.update(lr=optimizer.param_groups[0]["lr"])
 
     ave = []
     # gather the stats from all processes
@@ -97,15 +100,16 @@ def evaluate(data_loader, models, device):
         target = target.to(device, non_blocking=True)
 
         batch_size = images.shape[0]
-        for i, model in enumerate(models):
+        for i, (model, metric_logger) in enumerate(zip(models,
+                                                        metric_loggers)):
             with torch.cuda.amp.autocast():
                 output = model(images)
                 loss   = criterion(output, target)
 
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
-            metric_loggers[i].update(loss=loss.item())
-            metric_loggers[i].meters['acc1'].update(acc1.item(), n=batch_size)
-            metric_loggers[i].meters['acc5'].update(acc5.item(), n=batch_size)
+            metric_logger.update(loss=loss.item())
+            metric_logger.meters['acc1'].update(acc1.item(), n=batch_size)
+            metric_logger.meters['acc5'].update(acc5.item(), n=batch_size)
 
     ave = []
     # gather the stats from all processes
