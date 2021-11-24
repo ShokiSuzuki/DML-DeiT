@@ -136,8 +136,8 @@ def main(args):
     models_without_ddp = [models[i] for i in range(num_models)]
     if args.distributed:
         for i in range(num_models):
-            model = torch.nn.parallel.DistributedDataParallel(models[i], device_ids=[args.gpu])
-            models_without_ddp[i] = model.module
+            models[i] = torch.nn.parallel.DistributedDataParallel(models[i], device_ids=[args.gpu])
+            models_without_ddp[i] = models[i].module
 
 
     # display number of params in models
