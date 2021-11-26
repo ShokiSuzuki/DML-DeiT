@@ -1,3 +1,8 @@
+"""
+Almost taken from https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
+And slightly fixed
+"""
+
 import torch
 import torch.nn as nn
 from functools import partial
@@ -110,10 +115,6 @@ class TransformerEncoder(nn.Module):
 
 
 class VisionTransformer(nn.Module):
-    """
-    Based on https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/vision_transformer.py
-    """
-
     def __init__(self, img_size=224, patch_size=16, in_channels=3, num_classes=1000, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=True, distilled=False,
                  drop_rate=0., attn_drop_rate=0., drop_path_rate=0., embed_layer=PatchEmbed, norm_layer=nn.LayerNorm,
