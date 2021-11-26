@@ -1,10 +1,7 @@
-# Copyright (c) 2015-present, Facebook, Inc.
-# All rights reserved.
 import os
-import json
 
 from torchvision import datasets, transforms
-from torchvision.datasets.folder import ImageFolder, default_loader
+from torchvision.datasets.folder import ImageFolder
 
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import create_transform
@@ -55,7 +52,7 @@ def build_transform(is_train, args):
             transform = transforms.Compose([
                 transforms.Resize(args.input_size),
                 transforms.RandomHorizontalFlip(),
-                transforms.Pad(4, padding_mode="reflect"), 
+                transforms.Pad(4, padding_mode="reflect"),
                 transforms.RandomCrop(args.input_size, padding=0),
                 transforms.ToTensor(),
             ])

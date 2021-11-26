@@ -1,5 +1,3 @@
-# Copyright (c) 2015-present, Facebook, Inc.
-# All rights reserved.
 import argparse
 import datetime
 from os import write
@@ -7,7 +5,6 @@ import numpy as np
 import time
 import torch
 import torch.backends.cudnn as cudnn
-import torchvision
 import json
 
 from pathlib import Path
@@ -24,8 +21,8 @@ from dataloader.samplers import RASampler
 from model.loss import DMLLoss
 from model.model import *
 from trainer.trainer import *
-import utils
 from config import get_args_parser
+import utils
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -177,7 +174,7 @@ def main(args):
     # wrap the criterion in our custom DistillationLoss, which
     # just dispatches to the original criterion if args.distillation_type is 'none'
     criterion = DMLLoss(
-        criterion, args.distillation_type, args.distillation_alpha, args.distillation_tau, output_dir
+        criterion, args.distillation_type, args.distillation_tau, output_dir
     )
 
 

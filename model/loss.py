@@ -4,16 +4,14 @@ import json
 import utils
 
 
-
 class DMLLoss(torch.nn.Module):
 
     def __init__(self, base_criterion: torch.nn.Module,
-                distillation_type: str, alpha: float, tau: float, output_dir: str):
+                distillation_type: str, tau: float, output_dir: str):
         super().__init__()
         self.base_criterion = base_criterion
         assert distillation_type in ['none', 'soft', 'hard']
         self.distillation_type = distillation_type
-        self.alpha = alpha
         self.tau = tau
         self.output_dir = output_dir
 

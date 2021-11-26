@@ -102,24 +102,17 @@ def get_args_parser():
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
 
     # Distillation parameters
-    parser.add_argument('--teacher-model', default='regnety_160', type=str, metavar='MODEL',
-                        help='Name of teacher model to train (default: "regnety_160"')
-    parser.add_argument('--teacher-path', type=str, default='')
     parser.add_argument('--distillation-type', default='soft', choices=['none', 'soft', 'hard'], type=str, help="")
-    parser.add_argument('--distillation-alpha', default=0.1, type=float, help="")
     parser.add_argument('--distillation-tau', default=1.0, type=float, help="")
 
     # * Finetuning params
     parser.add_argument('--finetune', default='', help='finetune from checkpoint')
 
     # Dataset parameters
-    parser.add_argument('--data-path', default='/datasets01/imagenet_full_size/061417/', type=str,
+    parser.add_argument('--data-path', default='~/dataset/imagenet', type=str,
                         help='dataset path')
     parser.add_argument('--data-set', default='IMNET', choices=['CIFAR', 'IMNET', 'INAT', 'INAT19'],
                         type=str, help='Image Net dataset path')
-    parser.add_argument('--inat-category', default='name',
-                        choices=['kingdom', 'phylum', 'class', 'order', 'supercategory', 'family', 'genus', 'name'],
-                        type=str, help='semantic granularity')
 
     parser.add_argument('--output_dir', default='',
                         help='path where to save, empty for no saving')
@@ -142,9 +135,6 @@ def get_args_parser():
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
-
-    # use kl divergence on DML
-    parser.add_argument('--ind', action='store_true', default=False, help='change training method')
 
     parser.add_argument('--use_tensorboard', action='store_true', default=False, help='flag of whether to use tensorboard')
 

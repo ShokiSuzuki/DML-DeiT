@@ -1,8 +1,3 @@
-# Copyright (c) 2015-present, Facebook, Inc.
-# All rights reserved.
-"""
-Train and eval functions used in main.py
-"""
 import math
 import sys
 from typing import Iterable, Optional, List
@@ -55,15 +50,9 @@ def train_one_epoch(models: List[torch.nn.Module], criterion: DMLLoss, data_load
                 sys.exit(1)
 
             optimizers[i].zero_grad()
-            # loss_scalers[i].scale(loss).backward()
-            # if clip_grad is not None:
-            #     loss_scaler.unscale_(optimizer)
-            #     torch.nn.utils.clip_grad_norm_(models[i].parameters(), clip_grad=clip_grad)
-            # loss_scalers[i].step(optimizers[i])
-            # loss_scalers[i].update()
             is_second_order = hasattr(optimizers[i], 'is_second_order') and optimizers[i].is_second_order
             loss_scalers[i](loss, optimizers[i], clip_grad=clip_grad,
-                       parameters=models[i].parameters(), create_graph=is_second_order)
+                            parameters=models[i].parameters(), create_graph=is_second_order)
 
             torch.cuda.synchronize()
             if models_ema[i] is not None:
