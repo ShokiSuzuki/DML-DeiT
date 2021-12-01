@@ -27,6 +27,17 @@ import utils
 from torch.utils.tensorboard import SummaryWriter
 
 
+model_zoo = {'deit_tiny_patch16_224'            : deit_tiny_patch16_224,
+             'deit_small_patch16_224'           : deit_small_patch16_224,
+             'deit_base_patch16_224'            : deit_base_patch16_224,
+             'deit_tiny_distilled_patch16_224'  : deit_tiny_distilled_patch16_224,
+             'deit_small_distilled_patch16_224' : deit_small_distilled_patch16_224,
+             'deit_base_distilled_patch16_224'  : deit_base_distilled_patch16_224,
+             'deit_base_patch16_384'            : deit_base_patch16_384,
+             'deit_base_distilled_patch16_384'  : deit_base_patch16_384}
+
+
+
 def main(args):
     utils.init_distributed_mode(args)
 
@@ -104,7 +115,7 @@ def main(args):
     models = []
     for model_name in args.models:
         print(f"Creating model: {model_name}")
-        model = deit_tiny_distilled_patch16_224(
+        model = model_zoo[model_name](
             pretrained=False,
             num_classes=args.nb_classes,
             drop_rate=args.drop,
