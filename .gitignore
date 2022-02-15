@@ -1,7 +1,5 @@
 .ipynb*/
 runs/
-test*/
-exp.txt
 *pycache*/
 run.sh
 config.json
