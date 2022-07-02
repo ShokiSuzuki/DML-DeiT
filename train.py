@@ -234,9 +234,7 @@ def main(args):
 
         if args.output_dir:
             for i in range(num_models):
-                one_epoch_path = Path(args.output_dir + '/' + 'epoch' + f'{epoch}'.zfill(4))
-                one_epoch_path.mkdir(parents=True, exist_ok=True)
-                checkpoint_path = one_epoch_path / f'checkpoint{i}.pth'
+                checkpoint_path = output_dir / f'checkpoint{i}.pth'
                 utils.save_on_master({
                     'model': models_without_ddp[i].state_dict(),
                     'optimizer': optimizers[i].state_dict(),
@@ -247,11 +245,23 @@ def main(args):
                     'args': args,
                 }, checkpoint_path)
 
-
         test_stats_list = evaluate(data_loader_val, models, device)
         for i, test_stats in enumerate(test_stats_list):
             print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
-            max_accuracys[i] = max(max_accuracys[i], test_stats["acc1"])
+
+            if max_accuracys[i] < test_stats["acc1"]:
+                max_accuracys[i] = test_stats["acc1"]
+                if args.output_dir:
+                    checkpoint_path = output_dir / f'best_checkpoint{i}.pth'
+                    utils.save_on_master({
+                        'model': models_without_ddp[i].state_dict(),
+                        'optimizer': optimizers[i].state_dict(),
+                        'lr_scheduler': lr_schedulers[i].state_dict(),
+                        'epoch': epoch,
+                        'model_ema': None if not args.model_ema else get_state_dict(models_ema[i]),
+                        'scaler': loss_scalers[i].state_dict(),
+                        'args': args,
+                    }, checkpoint_path)
             print(f'Max accuracy: {max_accuracys[i]:.2f}%')
 
         for i, (train_stats, test_stats) in enumerate(zip(train_stats_list, test_stats_list)):
