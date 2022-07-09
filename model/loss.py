@@ -36,7 +36,7 @@ class DMLLoss(torch.nn.Module):
                 if self.distillation_type == 'soft':
                     distillation_loss += kl_div(outputs1_kd, outputs[i], T)
                 else:
-                    distillation_loss += F.cross_entropy(outputs1_kd, outputs[i].argmax(dim=1))
+                    distillation_loss += cross_entropy(outputs1_kd, outputs[i])
         else:
             for i in range(len(outputs)):
                 if i == model_id:
@@ -45,7 +45,7 @@ class DMLLoss(torch.nn.Module):
                 if self.distillation_type == 'soft':
                     distillation_loss += kl_div(outputs1, outputs[i], T)
                 else:
-                    distillation_loss += F.cross_entropy(outputs1, outputs[i].argmax(dim=1))
+                    distillation_loss += cross_entropy(outputs1, outputs[i])
 
         distillation_loss = distillation_loss / (len(outputs) - 1)
         loss = base_loss + distillation_loss
@@ -70,4 +70,16 @@ def kl_div(output1, output2, T):
                 reduction='batchmean',
                 log_target=True
             ) * (T * T)
+    return loss
+
+
+def cross_entropy(output1, output2):
+    if not isinstance(output2, torch.Tensor): # tuple to tensor
+        output2 = (output2[0] + output2[1]) / 2
+
+    loss = F.cross_entropy(
+                output1,
+                output2.argmax(dim=1)
+            )
+
     return loss
