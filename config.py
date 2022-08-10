@@ -5,6 +5,8 @@ def get_args_parser():
     parser = argparse.ArgumentParser('DeiT training and evaluation script', add_help=False)
     parser.add_argument('--batch-size', default=64, type=int)
     parser.add_argument('--epochs', default=300, type=int)
+    parser.add_argument('--bce-loss', action='store_true')
+    parser.add_argument('--unscale-lr', action='store_true')
 
     # Model parameters
     parser.add_argument('--models', default=['deit_base_patch16_224'], type=str, nargs='+', metavar='MODEL',
@@ -64,8 +66,8 @@ def get_args_parser():
 
     # Augmentation parameters
     parser.add_argument('--no-aug', action='store_true')
-    parser.add_argument('--color-jitter', type=float, default=None, metavar='PCT',
-                        help='Color jitter factor (default: None)')
+    parser.add_argument('--color-jitter', type=float, default=0.3, metavar='PCT',
+                        help='Color jitter factor (default: 0.3)')
     parser.add_argument('--aa', type=str, default='rand-m9-mstd0.5-inc1', metavar='NAME',
                         help='Use AutoAugment policy. "v0" or "original". " + \
                              "(default: rand-m9-mstd0.5-inc1)'),
@@ -76,6 +78,10 @@ def get_args_parser():
     parser.add_argument('--repeated-aug', action='store_true')
     parser.add_argument('--no-repeated-aug', action='store_false', dest='repeated_aug')
     parser.set_defaults(repeated_aug=True)
+
+    parser.add_argument('--ThreeAugment', action='store_true') #3augment
+    parser.add_argument('--src', action='store_true') #simple random crop
+
 
     # * Random Erase params
     parser.add_argument('--reprob', type=float, default=0.25, metavar='PCT',

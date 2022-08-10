@@ -15,7 +15,7 @@ import utils
 def train_one_epoch(models: List[torch.nn.Module], criterion: DMLLoss, data_loader: Iterable, optimizers: List[torch.optim.Optimizer],
                     device: torch.device, epoch: int, models_ema: List[ModelEma],
                     loss_scalers, clip_grad=None, mixup_fn: Optional[Mixup] = None,
-                    set_training_mode=True):
+                    set_training_mode=True, args=None):
 
     num_models = len(models)
     metric_loggers = []
@@ -35,6 +35,9 @@ def train_one_epoch(models: List[torch.nn.Module], criterion: DMLLoss, data_load
 
         if mixup_fn is not None:
             samples, targets = mixup_fn(samples, targets)
+
+        if args.bce_loss:
+            targets = targets.gt(0.0).type(targets.dtype)
 
         with torch.cuda.amp.autocast():
             outputs = [models[i](samples) for i in range(num_models)]

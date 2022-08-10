@@ -57,7 +57,6 @@ def build_transform(is_train, args):
                 transforms.ToTensor(),
             ])
 
-        print(transform)
         return transform
 
     t = []

@@ -7,6 +7,7 @@ import torch
 import torch.nn as nn
 from functools import partial
 import torch.nn.init as init
+from timm.models.layers import trunc_normal_
 
 
 __all__ = [
@@ -168,15 +169,15 @@ class VisionTransformer(nn.Module):
             self.head_dist = nn.Linear(self.embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
 
         # init weights
-        init.trunc_normal_(self.pos_embed, std=.02)
-        init.trunc_normal_(self.cls_token, std=.02)
+        trunc_normal_(self.pos_embed, std=.02)
+        trunc_normal_(self.cls_token, std=.02)
         if self.dist_token is not None:
-            init.trunc_normal_(self.dist_token, std=.02)
+            trunc_normal_(self.dist_token, std=.02)
         self.apply(self._init_weights)
 
     def _init_weights(self, m):  # Add for deit
         if isinstance(m, nn.Linear):
-            init.trunc_normal_(m.weight, std=.02)
+            trunc_normal_(m.weight, std=.02)
             if m.bias is not None:
                 nn.init.zeros_(m.bias)
         elif isinstance(m, nn.LayerNorm):

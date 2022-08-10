@@ -1,6 +1,7 @@
 import argparse
 import datetime
 from os import write
+from model.model_v2 import deit_small_patch16_36_LS
 import numpy as np
 import time
 import torch
@@ -20,9 +21,12 @@ from dataloader.datasets import build_dataset
 from dataloader.samplers import RASampler
 from model.loss import DMLLoss
 from model.model import *
+from model.model_v2 import *
 from trainer.trainer import *
 from config import get_args_parser
 import utils
+from augment import new_data_aug_generator
+
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -34,7 +38,8 @@ model_zoo = {'deit_tiny_patch16_224'            : deit_tiny_patch16_224,
              'deit_small_distilled_patch16_224' : deit_small_distilled_patch16_224,
              'deit_base_distilled_patch16_224'  : deit_base_distilled_patch16_224,
              'deit_base_patch16_384'            : deit_base_patch16_384,
-             'deit_base_distilled_patch16_384'  : deit_base_distilled_patch16_384}
+             'deit_base_distilled_patch16_384'  : deit_base_distilled_patch16_384,
+             'deit_small_patch16_LS'            : deit_small_patch16_36_LS}
 
 
 
@@ -93,14 +98,19 @@ def main(args):
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
         drop_last=True,
+        persistent_workers=True,
     )
+    if args.ThreeAugment:
+        data_loader_train.dataset.transform = new_data_aug_generator(args)
+    print(data_loader_train.dataset.transform)
 
     data_loader_val = torch.utils.data.DataLoader(
         dataset_val, sampler=sampler_val,
         batch_size=int(1.5 * args.batch_size),
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
-        drop_last=False
+        drop_last=False,
+        persistent_workers=True,
     )
 
     mixup_fn = None
@@ -180,6 +190,9 @@ def main(args):
     else:
         criterion = torch.nn.CrossEntropyLoss()
 
+    if args.bce_loss:
+        criterion = torch.nn.BCEWithLogitsLoss()
+
 
     output_dir = Path(args.output_dir)
     # wrap the criterion in our custom DistillationLoss, which
@@ -226,7 +239,8 @@ def main(args):
             models, criterion, data_loader_train,
             optimizers, device, epoch, models_ema,
             loss_scalers, args.clip_grad, mixup_fn,
-            set_training_mode=args.finetune == ''  # keep in eval mode during finetuning
+            set_training_mode=args.finetune == '',  # keep in eval mode during finetuning
+            args=args,
         )
 
         for i in range(num_models):
